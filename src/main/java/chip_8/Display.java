@@ -14,7 +14,7 @@ public class Display extends JPanel
 {
   public static final int TILES_ACROSS = 64;
   public static final int TILES_DOWN = 32;
-  public static int TILE_SIZE = 6;
+  public static int TILE_SIZE = 10;
   public static int SCREEN_WIDTH = TILE_SIZE * TILES_ACROSS;
   public static int SCREEN_HEIGHT = TILE_SIZE * TILES_DOWN;
 

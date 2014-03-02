@@ -2,7 +2,6 @@ package chip_8;
 
 
 import java.io.File;
-import java.net.URISyntaxException;
 import java.util.Random;
 
 
@@ -20,39 +19,51 @@ public class CPU implements Runnable
   private Keyboard keyboard;
   private Random randGenerator;
   private Memory memory;
-  private boolean exit;
+  private boolean resetRequested;
+  private String currentRom;
 
   // Use these to avoid annoying explicit casts in arithmetic
-  private static final byte zero = 0;
-  private static final byte one = 1;
+  public static final byte zero = 0;
+  public static final byte one = 1;
 
+  /* Initialize the CPU exactly once */
   public CPU(Display d, String romName)
   {
     display = d;
-    init(romName);
-  }
-
-  private void init(String romName)
-  {
-    keyboard = new Keyboard();
+    keyboard = new Keyboard(this);
+    display.addKeyListener(keyboard);
     randGenerator = new Random();
     reg = new Registers();
-    exit = false;
-    memory = new Memory();
-
-    File rom = Utils.getRom(romName);
-    File digits = Utils.getResourceFile("Digits.bin");
-
-    memory.loadFile(rom, START_OF_PROGRAM);
-    memory.loadFile(digits, zero);
-    display.addKeyListener(keyboard);
+    resetRequested = false;
+    currentRom = romName;
+    memory = new Memory(currentRom);
   }
 
-
-  @Override
-  public void run()
+  /* Reset the CPU. Clear the memory, registers, and load new rom */
+  private void reset()
   {
-    while (! exit) {
+    display.clear();
+    memory.reset();
+    reg.reset();
+    keyboard.reset();
+    File rom = Utils.getRom(currentRom);
+    memory.loadFile(rom, START_OF_PROGRAM);
+    resetRequested = false;
+  }
+
+  /* Request to reset the CPU with a new Rom */
+  public void reset(String romName)
+  {
+    currentRom = romName;
+    resetRequested = true;
+    display.grabFocus();
+  }
+
+  /* Run the CPU while a reset has not been requested */
+  @Override public void run()
+  {
+    /* While a reset has not been requested */
+    while (! resetRequested) {
       /* Read instruction*/
       short instr = memory.readInstruction(reg.pc);
       /* Update PC */
@@ -62,8 +73,10 @@ public class CPU implements Runnable
       /* Wait for Clock Cycle to end */
       sleep();
     }
-    display.clear();
+    this.reset();
+    this.run();
   }
+
 
   private void sleep() {
     try {
@@ -163,17 +176,19 @@ public class CPU implements Runnable
     }
   }
 
+  /* Return from a sub-routine */
   private void ret() {
-    /* Return from a sub-routine */
     reg.sp--;
     reg.pc = reg.stack[reg.sp];
   }
 
+  /* Skip next instruction on 'equal' */
   private void se(int x, int bite) {
     if (reg.v[x] == bite)
       reg.pc += 2;
   }
 
+  /* Skip next instruction on 'not equal' */
   private void sne(int x, int bite) {
     if (reg.v[x] != bite)
       reg.pc += 2;
@@ -186,6 +201,7 @@ public class CPU implements Runnable
   }
 
 
+  /* Dispatch an instruction to the Arithmetic Logic Unit */
   private void dispatchALU(byte x, byte y, int opcode) {
     int result = 0;
     byte vX = reg.v[x];
@@ -237,6 +253,7 @@ public class CPU implements Runnable
     reg.v[x] = (byte)(0xFF & result);
   }
 
+  /* Dispatch a general Load instruction */
   private void dispatchLD(int x, int opcode) {
     switch (opcode) {
       case 0x07:
@@ -245,6 +262,11 @@ public class CPU implements Runnable
         break;
       case 0x0A:
         byte k = (byte)keyboard.waitForPress();
+        // If no button was pressed, repeat instruction
+        if (k == -1){
+          reg.pc -= 2;
+          break;
+        }
         reg.v[x] = k;
         keyboard.release(k);
         log.regReg("LD", x, "K");
@@ -280,12 +302,10 @@ public class CPU implements Runnable
     }
   }
 
-  public void stop() {
-    exit = true;
-  }
+
 
   public enum Speed {
-    LOW(1), MEDIUM(2), HIGH(3);
+    LOW(3), MEDIUM(2), HIGH(1);
 
     int speed;
 

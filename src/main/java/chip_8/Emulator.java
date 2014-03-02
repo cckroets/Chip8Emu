@@ -29,10 +29,9 @@ public class Emulator
   {
     /* Create new JFrame */
     JFrame window = new JFrame("CHIP-8");
-    window.setResizable(false);
     JPanel panel = new JPanel();
+    window.getContentPane().add(panel);
     panel.setLayout(new BorderLayout());
-    window.getContentPane().add(panel);//, BorderLayout.CENTER);
 
     final JList romList = new JList(romFolder.list());
     romList.setLayoutOrientation(JList.HORIZONTAL_WRAP);
@@ -52,6 +51,7 @@ public class Emulator
 
     /* JFrame Properties */
     window.pack();
+    window.setResizable(false);
     window.setLocation(200, 200);
     window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     window.setVisible(true);
@@ -63,13 +63,20 @@ public class Emulator
       @Override
       public void valueChanged(ListSelectionEvent e)
       {
-        if (cpu != null)
-          cpu.stop();
-        /* Start the CPU */
-        screen.clear();
-        screen.grabFocus();
-        cpu = new CPU(screen,romList.getSelectedValue().toString());
-        new Thread(cpu).start();
+        if (! e.getValueIsAdjusting()) {
+          String rom = romList.getSelectedValue().toString();
+          System.out.println("CHANGED");
+
+          if (cpu == null) {
+            /* Start the CPU */
+            screen.clear();
+            screen.grabFocus();
+            cpu = new CPU(screen,rom);
+            new Thread(cpu).start();
+          } else {
+            cpu.reset(rom);
+          }
+        }
       }
     });
 
@@ -79,19 +86,4 @@ public class Emulator
   {
     new Emulator();
   }
-
-  public class Rom {
-    private File file;
-
-    public Rom(File file)
-    {
-      this.file = file;
-    }
-
-    public String toString() {
-      return file.getName();
-    }
-  }
-
-
 }

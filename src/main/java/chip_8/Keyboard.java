@@ -3,6 +3,7 @@ package chip_8;
 
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.Arrays;
 
 
 /**
@@ -13,6 +14,7 @@ public class Keyboard extends KeyAdapter
   public static final int NUM_KEYS = 16;
 
   private boolean keys[];
+  private CPU cpu;
 
   private static final int[] keyMap = new int[]
                               { 0x1, 0x2, 0x3, 0xC,
@@ -20,15 +22,18 @@ public class Keyboard extends KeyAdapter
                                 0x7, 0x8, 0x9, 0xE,
                                 0xA, 0x0, 0xB, 0xF };
 
-  public Keyboard() {
+  public Keyboard(CPU cpu) {
     keys = new boolean[NUM_KEYS];
+    this.cpu = cpu;
   }
 
   public int waitForPress() {
-    while(true) {
+  //  while(cpu.isRunning()) {
+  //    System.out.print("/");
       for (int i = 0; i < NUM_KEYS; i++)
         if (keys[i]) return i;
-    }
+    //}
+    return -1;
   }
 
   public boolean isDown(int key) {
@@ -62,5 +67,10 @@ public class Keyboard extends KeyAdapter
   public void release(int key)
   {
     keys[key] = false;
+  }
+
+  public void reset()
+  {
+    Arrays.fill(keys, 0, NUM_KEYS, false);
   }
 }

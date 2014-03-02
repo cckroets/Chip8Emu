@@ -5,6 +5,7 @@ import com.google.common.io.Files;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 
 
 /**
@@ -14,8 +15,25 @@ public class Memory
 {
   public static final int RAM_SIZE = 4096;
   private byte[] ram = new byte[RAM_SIZE];
+  private static File digits = Utils.getResourceFile("digits.bin");
 
 
+  public Memory(String rom)
+  {
+    /* Load the digits font into memory */
+    this.loadFile(digits, CPU.zero);
+    this.loadFile(Utils.getRom(rom),CPU.START_OF_PROGRAM);
+  }
+
+  /* Reset the memory. Blank the loaded rom, but leave the loaded digits */
+  public void reset()
+  {
+    int begin = CPU.START_OF_PROGRAM;
+    int end = RAM_SIZE - begin;
+    Arrays.fill(ram, begin, end, CPU.zero);
+  }
+
+  /* Read an instruction from memory at pointer */
   public short readInstruction(short pointer)
   {
     return Utils.concatBytes(ram[pointer],ram[pointer+1]);
