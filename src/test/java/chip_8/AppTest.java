@@ -1,4 +1,4 @@
-package com.mycompany.app;
+package chip_8;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -7,8 +7,7 @@ import junit.framework.TestSuite;
 /**
  * Unit test for simple App.
  */
-public class AppTest 
-    extends TestCase
+public class AppTest extends TestCase
 {
     /**
      * Create the test case
@@ -31,8 +30,10 @@ public class AppTest
     /**
      * Rigourous Test :-)
      */
-    public void testApp()
+    public void testByte()
     {
-        assertTrue( true );
+
+
     }
+
 }

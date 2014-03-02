@@ -49,7 +49,6 @@ public class Keyboard extends KeyAdapter
   public void keyPressed(KeyEvent event)
   {
     // Key was pressed
-    System.out.print(".");
     handleKeyEvent(event, true);
   }
 
@@ -58,5 +57,10 @@ public class Keyboard extends KeyAdapter
   {
     // Key was released
     handleKeyEvent(event,false);
+  }
+
+  public void release(int key)
+  {
+    keys[key] = false;
   }
 }
