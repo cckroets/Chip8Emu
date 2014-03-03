@@ -28,11 +28,8 @@ public class Keyboard extends KeyAdapter
   }
 
   public int waitForPress() {
-  //  while(cpu.isRunning()) {
-  //    System.out.print("/");
-      for (int i = 0; i < NUM_KEYS; i++)
-        if (keys[i]) return i;
-    //}
+    for (int i = 0; i < NUM_KEYS; i++)
+      if (keys[i]) return i;
     return -1;
   }
 

@@ -56,12 +56,12 @@ public class CPU implements Runnable
   {
     currentRom = romName;
     resetRequested = true;
-    display.grabFocus();
   }
 
   /* Run the CPU while a reset has not been requested */
   @Override public void run()
   {
+    display.grabFocus();
     /* While a reset has not been requested */
     while (! resetRequested) {
       /* Read instruction*/
