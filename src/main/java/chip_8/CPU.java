@@ -10,12 +10,12 @@ import java.util.Random;
  */
 public class CPU implements Runnable
 {
-  private static InstructionLogger log = new InstructionLogger();
+  public static InstructionLogger log = new InstructionLogger();
   public static final int SPRITE_LENGTH = 5;
   public static final short START_OF_PROGRAM = 0x200;
 
   private Display display;
-  private Registers reg;
+  public Registers reg;
   private Keyboard keyboard;
   private Random randGenerator;
   private Memory memory;
@@ -30,13 +30,15 @@ public class CPU implements Runnable
   public CPU(Display d, String romName)
   {
     display = d;
-    keyboard = new Keyboard(this);
+    keyboard = new Keyboard();
     display.addKeyListener(keyboard);
     randGenerator = new Random();
     reg = new Registers();
     resetRequested = false;
     currentRom = romName;
     memory = new Memory(currentRom);
+    log.setMem(memory);
+    log.setReg(reg);
   }
 
   /* Reset the CPU. Clear the memory, registers, and load new rom */
@@ -74,13 +76,12 @@ public class CPU implements Runnable
       sleep();
     }
     this.reset();
-    this.run();
   }
 
 
   private void sleep() {
     try {
-      Thread.sleep(0,10);
+      Thread.sleep(0,1000);
     } catch(InterruptedException ex) {
       Thread.currentThread().interrupt();
     }
@@ -88,10 +89,10 @@ public class CPU implements Runnable
 
   private void executeInstr(short instr)
   {
-    byte x = Utils.getX(instr);
-    byte y = Utils.getY(instr);
-    byte kk = Utils.getKK(instr);
-    short nnn = Utils.getNNN(instr);
+    int x   = (instr & 0x0F00) >> 8;
+    int y   = (instr & 0x00F0) >> 4;
+    int kk  = instr & 0x00FF;
+    int nnn = instr & 0x0FFF;
 
     switch(instr & 0xF000)
     {
@@ -106,7 +107,7 @@ public class CPU implements Runnable
         }
         break;
       case 0x1000:
-        reg.pc = nnn;
+        reg.pc = (short)nnn;
         log.addr("JP",nnn);
         break;
       case 0x2000:
@@ -126,7 +127,7 @@ public class CPU implements Runnable
         log.regReg("SE", x, y);
         break;
       case 0x6000:
-        reg.v[x] = kk;
+        reg.v[x] = (byte)kk;
         log.regAddr("LD",x,kk);
         break;
       case 0x7000:
@@ -141,7 +142,7 @@ public class CPU implements Runnable
         log.regReg("SNE", x, y);
         break;
       case 0xA000:
-        reg.i = nnn;
+        reg.i = (short)nnn;
         log.regAddr("LD", "I", nnn);
         break;
       case 0xB000:
@@ -170,9 +171,6 @@ public class CPU implements Runnable
       case 0xF000:
         dispatchLD(x, kk);
         break;
-      default:
-        System.exit(1);
-
     }
   }
 
@@ -194,59 +192,58 @@ public class CPU implements Runnable
       reg.pc += 2;
   }
 
-  private void call(short nnn) {
+  private void call(int nnn) {
     reg.stack[reg.sp] = reg.pc;
     reg.sp++;
-    reg.pc = nnn;
+    reg.pc = (short)nnn;
   }
 
 
   /* Dispatch an instruction to the Arithmetic Logic Unit */
-  private void dispatchALU(byte x, byte y, int opcode) {
+  public void dispatchALU(int x, int y, int opcode) {
     int result = 0;
-    byte vX = reg.v[x];
-    byte vY = reg.v[y];
+    int vX = reg.v[x] & 0xFF;
+    int vY = reg.v[y] & 0xFF;
 
     switch (opcode) {
       case 0:
         result = vY;
         break;
       case 1:
-        result = (byte)(vX | vY);
+        result = (vX | vY);
         log.regReg("OR", x, y);
         break;
       case 2:
-        result = (byte)(vX & vY);
+        result = (vX & vY);
         log.regReg("AND", x, y);
         break;
       case 3:
-        result = (byte)(vX ^ vY);
+        result = (vX ^ vY);
         log.regReg("XOR", x, y);
         break;
       case 4:
-        result = (byte)(vX + vY);
-        reg.v[0xf] = (byte)((result & 0x100) >> 8);
-        result &= 0xFF;
+        result = (vX + vY);
+        reg.v[0xf] = (result > 0xFF) ? one : zero;
         log.regReg("ADD", x, y);
         break;
       case 5:
         reg.v[0xf] = (vX > vY) ? one : zero;
-        result = (byte)(vX - vY);
+        result = (vX - vY);
         log.regReg("SUB", x, y);
         break;
       case 6:
         reg.v[0xf] = (byte)(vX & 1);
-        result = (byte)(vX >> 1);
+        result = (vX >> 1);
         log.regReg("SHR", x, y);
         break;
       case 7:
         reg.v[0xf] = (vY > vX) ? one : zero;
-        result = (byte)(vY - vX);
+        result = (vY - vX);
         log.regReg("SUBN", x, y);
         break;
       case 0xE:
         reg.v[0xf] = (vX & 0x80) != 0 ? one : zero;
-        result = (byte)(vX << 1);
+        result = (vX << 1);
         log.regReg("SHL", x, y);
         break;
     }
@@ -280,8 +277,9 @@ public class CPU implements Runnable
         log.regReg("LD", "ST", x);
         break;
       case 0x1E:
-        reg.i += reg.v[x];
+        reg.i += (0xFF & reg.v[x]);
         log.regReg("ADD", "I", x);
+        log.name("Vx=" + reg.v[x]);
         break;
       case 0x29:
         reg.i = (short)((reg.v[x] & 0x0F) * SPRITE_LENGTH);
@@ -294,10 +292,12 @@ public class CPU implements Runnable
       case 0x55:
         memory.store(x,reg);
         log.regReg("LD", "[I]", x);
+        reg.i += x+1;
         break;
       case 0x65:
         memory.load(x, reg);
         log.regReg("LD", x, "[I]");
+        reg.i += x+1;
         break;
     }
   }

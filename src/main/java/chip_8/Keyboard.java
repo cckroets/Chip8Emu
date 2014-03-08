@@ -14,7 +14,6 @@ public class Keyboard extends KeyAdapter
   public static final int NUM_KEYS = 16;
 
   private boolean keys[];
-  private CPU cpu;
 
   private static final int[] keyMap = new int[]
                               { 0x1, 0x2, 0x3, 0xC,
@@ -22,9 +21,8 @@ public class Keyboard extends KeyAdapter
                                 0x7, 0x8, 0x9, 0xE,
                                 0xA, 0x0, 0xB, 0xF };
 
-  public Keyboard(CPU cpu) {
+  public Keyboard() {
     keys = new boolean[NUM_KEYS];
-    this.cpu = cpu;
   }
 
   public int waitForPress() {

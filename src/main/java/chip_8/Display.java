@@ -39,14 +39,15 @@ public class Display extends JPanel
   /* Draw a sprite av (vx,vy) on the screen, which starts at i in memory */
   public boolean draw(byte vx, byte vy, short i, Memory mem, byte height)
   {
+    CPU.log.dumpI();
+    CPU.log.dumpSprite(height);
     int y = vy;
     if ( y < 0) y += TILES_DOWN;
-      boolean collision = false;
-
+    boolean collision = false;
     for (int p = 0; p < height; p++) {
       byte bite = mem.at((short)(i+p));
       for (int b = 0; b < 8; b++) {
-        boolean on = ((bite >> 7-b) & 1) == 1;
+        boolean on = ((bite & (0x80 >> b))) != 0;
         int x = (vx + b) % TILES_ACROSS;
         if (x < 0) x += TILES_ACROSS;
         boolean erased = on && pixelModel[x][y];

@@ -42,6 +42,7 @@ public class Memory
   /* Store the binary digits of a number in memory at I */
   public void storeBCD(int num, short location)
   {
+    num &= 0xFF;
     int hun = (num / 100);
     int ten = ((num % 100) / 10);
     int one = ((num % 100) % 10);

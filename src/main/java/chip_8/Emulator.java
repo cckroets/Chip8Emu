@@ -86,6 +86,7 @@ public class Emulator
           new Thread(cpu).start();
         } else {
           cpu.reset(rom.toString());
+          cpu.run();
         }
       }
     });
