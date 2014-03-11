@@ -1,15 +1,19 @@
 package chip_8;
 
 
+import Emulation.Hardware;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 
 
 /**
  * @author ckroetsc
  */
-public class Keyboard extends KeyAdapter
+public class Keyboard extends KeyAdapter implements Hardware
 {
   public static final int NUM_KEYS = 16;
 
@@ -64,6 +68,21 @@ public class Keyboard extends KeyAdapter
     keys[key] = false;
   }
 
+  @Override
+  public void saveState(DataOutputStream out)
+      throws IOException
+  {
+
+  }
+
+  @Override
+  public void loadState(DataInputStream in)
+      throws IOException
+  {
+
+  }
+
+  @Override
   public void reset()
   {
     Arrays.fill(keys, 0, NUM_KEYS, false);

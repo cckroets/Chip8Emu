@@ -1,83 +1,60 @@
 package chip_8;
 
 
-import java.io.File;
-import java.util.Random;
+import Emulation.CPU;
+import Emulation.Rom;
 
 
 /**
  * @author ckroetsc
  */
-public class CPU implements Runnable
+public class Chip8Processor extends CPU
 {
   public static InstructionLogger log = new InstructionLogger();
   public static final int SPRITE_LENGTH = 5;
   public static final short START_OF_PROGRAM = 0x200;
 
-  private Display display;
-  public Registers reg;
-  private Keyboard keyboard;
-  private Random randGenerator;
-  private Memory memory;
-  private boolean resetRequested;
-  private String currentRom;
+  private Display   display  = null;
+  private Registers reg      = new Registers();
+  private Keyboard  keyboard = new Keyboard();
+  private Memory    memory   = new Memory();
 
   // Use these to avoid annoying explicit casts in arithmetic
   public static final byte zero = 0;
   public static final byte one = 1;
 
-  /* Initialize the CPU exactly once */
-  public CPU(Display d, String romName)
+  /* Initialize the Chip8Processor exactly once */
+  public Chip8Processor(Display display, Rom rom)
   {
-    display = d;
-    keyboard = new Keyboard();
-    display.addKeyListener(keyboard);
-    randGenerator = new Random();
-    reg = new Registers();
-    resetRequested = false;
-    currentRom = romName;
-    memory = new Memory(currentRom);
+    super(rom);
+    this.display = display;
+    this.display.addKeyListener(keyboard);
     log.setMem(memory);
     log.setReg(reg);
+    loadRom(rom);
+    addHardware(display,keyboard,reg,memory);
   }
 
-  /* Reset the CPU. Clear the memory, registers, and load new rom */
-  private void reset()
+
+  @Override
+  protected void loadRom(Rom rom)
   {
-    display.clear();
-    memory.reset();
-    reg.reset();
-    keyboard.reset();
-    File rom = Utils.getRom(currentRom);
-    memory.loadFile(rom, START_OF_PROGRAM);
-    resetRequested = false;
+    memory.loadFile(rom.getRomFile(),START_OF_PROGRAM);
   }
 
-  /* Request to reset the CPU with a new Rom */
-  public void reset(String romName)
+
+  @Override
+  protected void executeCycle()
   {
-    currentRom = romName;
-    resetRequested = true;
+    /* Read instruction*/
+    short instr = memory.readInstruction(reg.pc);
+    /* Update PC */
+    reg.pc += 2;
+    /* Execute instruction */
+    executeInstr(instr);
+    /* Wait for Clock Cycle to end */
+    sleep();
   }
-
-  /* Run the CPU while a reset has not been requested */
-  @Override public void run()
-  {
-    display.grabFocus();
-    /* While a reset has not been requested */
-    while (! resetRequested) {
-      /* Read instruction*/
-      short instr = memory.readInstruction(reg.pc);
-      /* Update PC */
-      reg.pc += 2;
-      /* Execute instruction */
-      executeInstr(instr);
-      /* Wait for Clock Cycle to end */
-      sleep();
-    }
-    this.reset();
-  }
-
 
   private void sleep() {
     try {
@@ -87,7 +64,7 @@ public class CPU implements Runnable
     }
   }
 
-  private void executeInstr(short instr)
+  private void executeInstr(int instr)
   {
     int x   = (instr & 0x0F00) >> 8;
     int y   = (instr & 0x00F0) >> 4;
@@ -102,7 +79,7 @@ public class CPU implements Runnable
           log.name("CLS");
         }
         else if (instr == 0x00EE) {
-          ret();
+          reg.ret();
           log.name("RET");
         }
         break;
@@ -111,7 +88,7 @@ public class CPU implements Runnable
         log.addr("JP",nnn);
         break;
       case 0x2000:
-        call(nnn);
+        reg.call(nnn);
         log.addr("CALL",nnn);
         break;
       case 0x3000:
@@ -123,46 +100,46 @@ public class CPU implements Runnable
         log.regAddr("SNE",x, kk);
         break;
       case 0x5000:
-        se(x,reg.v[y]);
+        se(x,reg.v(y));
         log.regReg("SE", x, y);
         break;
       case 0x6000:
-        reg.v[x] = (byte)kk;
+        reg.setVx(x, kk);
         log.regAddr("LD",x,kk);
         break;
       case 0x7000:
-        reg.v[x] += kk;
+        reg.setVx(x, reg.v(x) + kk);
         log.regAddr("ADD",x,kk);
         break;
       case 0x8000:
         dispatchALU(x, y, instr & 0x000F);
         break;
       case 0x9000:
-        sne(x,reg.v[y]);
+        sne(x,reg.v(y));
         log.regReg("SNE", x, y);
         break;
       case 0xA000:
-        reg.i = (short)nnn;
+        reg.i = nnn;
         log.regAddr("LD", "I", nnn);
         break;
       case 0xB000:
-        reg.pc = (short)(nnn + reg.v[0]);
+        reg.pc = (nnn + reg.v(0));
         log.regAddr("JP",0,nnn);
         break;
       case 0xC000:
-        int rand = randGenerator.nextInt(256);
-        reg.v[x] = (byte)(rand & kk);
+        int rand = (int)(Math.random() * 255);
+        reg.setVx(x, rand & kk);
         log.regAddr("RND",x,kk);
         break;
       case 0xD000:
-        boolean col = display.draw(reg.v[x], reg.v[y], reg.i, memory, (byte)(instr & 0x000F));
-        reg.v[0xf] = col ? one : zero;
+        boolean col = display.draw(reg.v(x), reg.v(y), reg.i, memory, (instr & 0x000F));
+        reg.setVF(col);
         log.regRegAddr("DRW", x, y, (instr & 0x000F));
         break;
       case 0xE000:
         boolean skp_if_pressed = (instr & 1) == 0;
-        if (skp_if_pressed == keyboard.isDown(reg.v[x])) {
-          keyboard.release(reg.v[x]);
+        if (skp_if_pressed == keyboard.isDown(reg.v(x))) {
+          keyboard.release(reg.v(x));
           reg.pc += 2;
         }
         String op = (kk == 0x9E) ? "SKP" : "SKNP";
@@ -174,36 +151,23 @@ public class CPU implements Runnable
     }
   }
 
-  /* Return from a sub-routine */
-  private void ret() {
-    reg.sp--;
-    reg.pc = reg.stack[reg.sp];
-  }
-
   /* Skip next instruction on 'equal' */
   private void se(int x, int bite) {
-    if (reg.v[x] == bite)
+    if (reg.v(x) == bite)
       reg.pc += 2;
   }
 
   /* Skip next instruction on 'not equal' */
   private void sne(int x, int bite) {
-    if (reg.v[x] != bite)
+    if (reg.v(x) != bite)
       reg.pc += 2;
   }
-
-  private void call(int nnn) {
-    reg.stack[reg.sp] = reg.pc;
-    reg.sp++;
-    reg.pc = (short)nnn;
-  }
-
 
   /* Dispatch an instruction to the Arithmetic Logic Unit */
   public void dispatchALU(int x, int y, int opcode) {
     int result = 0;
-    int vX = reg.v[x] & 0xFF;
-    int vY = reg.v[y] & 0xFF;
+    int vX = reg.v(x) & 0xFF;
+    int vY = reg.v(y) & 0xFF;
 
     switch (opcode) {
       case 0:
@@ -223,38 +187,38 @@ public class CPU implements Runnable
         break;
       case 4:
         result = (vX + vY);
-        reg.v[0xf] = (result > 0xFF) ? one : zero;
+        reg.setVF(result > 0xFF);
         log.regReg("ADD", x, y);
         break;
       case 5:
-        reg.v[0xf] = (vX > vY) ? one : zero;
+        reg.setVF(vX > vY);
         result = (vX - vY);
         log.regReg("SUB", x, y);
         break;
       case 6:
-        reg.v[0xf] = (byte)(vX & 1);
+        reg.setVF((vX & 1) == 1);
         result = (vX >> 1);
         log.regReg("SHR", x, y);
         break;
       case 7:
-        reg.v[0xf] = (vY > vX) ? one : zero;
+        reg.setVF(vY > vX);
         result = (vY - vX);
         log.regReg("SUBN", x, y);
         break;
       case 0xE:
-        reg.v[0xf] = (vX & 0x80) != 0 ? one : zero;
+        reg.setVF((vX & 0x80) != 0);
         result = (vX << 1);
         log.regReg("SHL", x, y);
         break;
     }
-    reg.v[x] = (byte)(0xFF & result);
+    reg.setVx(x, result);
   }
 
   /* Dispatch a general Load instruction */
   private void dispatchLD(int x, int opcode) {
     switch (opcode) {
       case 0x07:
-        reg.v[x] = reg.dt;
+        reg.setVx(x, reg.dt);
         log.regReg("LD", x, "DT");
         break;
       case 0x0A:
@@ -264,58 +228,39 @@ public class CPU implements Runnable
           reg.pc -= 2;
           break;
         }
-        reg.v[x] = k;
+        reg.setVx(x, k);
         keyboard.release(k);
         log.regReg("LD", x, "K");
         break;
       case 0x15:
-        reg.dt = reg.v[x];
+        reg.dt = reg.v(x);
         log.regReg("LD", "DT", x);
         break;
       case 0x18:
-        reg.st = reg.v[x];
+        reg.st = reg.v(x);
         log.regReg("LD", "ST", x);
         break;
       case 0x1E:
-        reg.i += (0xFF & reg.v[x]);
+        reg.i += (0xFF & reg.v(x));
         log.regReg("ADD", "I", x);
-        log.name("Vx=" + reg.v[x]);
         break;
       case 0x29:
-        reg.i = (short)((reg.v[x] & 0x0F) * SPRITE_LENGTH);
+        reg.i = (reg.v(x) & 0x0F) * SPRITE_LENGTH;
         log.regReg("LD", "F", x);
         break;
       case 0x33:
-        memory.storeBCD(reg.v[x], reg.i);
+        memory.storeBCD(reg.v(x), reg.i);
         log.regReg("LD", "B", x);
         break;
       case 0x55:
-        memory.store(x,reg);
+        memory.store(x, reg);
         log.regReg("LD", "[I]", x);
-        reg.i += x+1;
         break;
       case 0x65:
         memory.load(x, reg);
         log.regReg("LD", x, "[I]");
-        reg.i += x+1;
         break;
     }
   }
-
-
-
-  public enum Speed {
-    LOW(3), MEDIUM(2), HIGH(1);
-
-    int speed;
-
-    private Speed(int value) {
-      this.speed = value;
-    }
-    public int getValue() {
-      return speed;
-    }
-  }
-
 }
 

@@ -1,7 +1,10 @@
 package chip_8;
 
 
+import Emulation.Hardware;
 import java.awt.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import javax.swing.*;
 import java.util.Arrays;
@@ -10,7 +13,7 @@ import java.util.Arrays;
 /**
  * @author ckroetsc
  */
-public class Display extends JPanel
+public class Display extends JPanel implements Hardware
 {
   public static final int TILES_ACROSS = 64;
   public static final int TILES_DOWN = 32;
@@ -21,7 +24,8 @@ public class Display extends JPanel
   public static Color FOREGROUND_COLOR = new Color(0x19251B);
   public static Color BACKGROUND_COLOR = new Color(0x496D4F);
 
-  private boolean[][] pixelModel;
+  private boolean[][] pixelModel = new boolean[TILES_ACROSS][TILES_DOWN];
+
 
   @Override
   public void paint(Graphics g) {
@@ -37,12 +41,14 @@ public class Display extends JPanel
   }
 
   /* Draw a sprite av (vx,vy) on the screen, which starts at i in memory */
-  public boolean draw(byte vx, byte vy, short i, Memory mem, byte height)
+  public boolean draw(int vx, int vy, int i, Memory mem, int height)
   {
-    CPU.log.dumpI();
-    CPU.log.dumpSprite(height);
-    int y = vy;
-    if ( y < 0) y += TILES_DOWN;
+    vx &= 0xFF;
+    Chip8Processor.log.dumpI();
+    Chip8Processor.log.dumpSprite(height);
+    Chip8Processor.log.dumpAllReg();
+    if ( vy < 0) vy += TILES_DOWN;
+    int y = vy & 0xFF;
     boolean collision = false;
     for (int p = 0; p < height; p++) {
       byte bite = mem.at((short)(i+p));
@@ -70,10 +76,37 @@ public class Display extends JPanel
   }
 
   public Display() {
-    pixelModel = new boolean[TILES_ACROSS][TILES_DOWN];
     this.setPreferredSize(new Dimension(SCREEN_WIDTH,SCREEN_HEIGHT));
     this.setFocusable(true);
   }
 
+  @Override
+  public void saveState(DataOutputStream out)
+      throws IOException
+  {
+    for (int x = 0; x < TILES_ACROSS; x++) {
+      for (int y = 0; y < TILES_DOWN; y++) {
+        out.writeBoolean(pixelModel[x][y]);
+      }
+    }
+  }
 
+  @Override
+  public void loadState(DataInputStream in)
+      throws IOException
+  {
+    clear();
+    for (int x = 0; x < TILES_ACROSS; x++) {
+      for (int y = 0; y < TILES_DOWN; y++) {
+        pixelModel[x][y] = in.readBoolean();
+      }
+    }
+    repaint();
+  }
+
+  @Override
+  public void reset()
+  {
+    clear();
+  }
 }

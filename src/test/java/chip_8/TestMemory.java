@@ -36,7 +36,7 @@ public class TestMemory extends TestCase
     public void testMemoryReadWrite()
     {
       /* Create blank Memory and registers */
-      Memory m = new Memory("pong2.rom");
+      Memory m = new Memory();
       Registers reg = new Registers();
       m.reset();
 
@@ -45,7 +45,7 @@ public class TestMemory extends TestCase
 
       /* Fill  v0-v15 with their own index */
       for (byte v=0; v < 16; v++) {
-        reg.v[v] = v;
+        reg.setVx(v, v);
       }
 
       /* Store the registers to memory */
@@ -60,7 +60,7 @@ public class TestMemory extends TestCase
 
       /* Assert the V registers have their correct value */
       for (byte v=0; v < 16; v++) {
-        assertEquals(v,reg.v[v]);
+        assertEquals(v,reg.v(v));
       }
     }
 

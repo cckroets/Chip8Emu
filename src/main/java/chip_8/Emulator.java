@@ -1,16 +1,17 @@
 package chip_8;
 
 
+import Emulation.Rom;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
-import java.util.*;
-import java.util.List;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 
 
 /**
@@ -18,8 +19,8 @@ import javax.swing.event.ListSelectionListener;
  */
 public class Emulator
 {
-  /* The CHIP-8 CPU that executes instructions */
-  private CPU cpu = null;
+  /* The CHIP-8 Chip8Processor that executes instructions */
+  private Chip8Processor cpu = null;
 
   /* Displays the screen of the Chip-8 */
   private Display screen;
@@ -40,7 +41,7 @@ public class Emulator
 
     JScrollPane romChooser = makeRomChooser(romList,screen.getPreferredSize());
     romChooser.setPreferredSize(new Dimension(160,screen.getPreferredSize().height));
-    JPanel buttons = makeButtonPanel(romList);
+    JPanel buttons = makeButtonPanel(romList,screen);
 
     /* Add panels to the frame */
     panel.add(screen, BorderLayout.EAST);
@@ -58,7 +59,7 @@ public class Emulator
     window.setVisible(true);
   }
 
-  private JPanel makeButtonPanel(final JList romList)
+  private JPanel makeButtonPanel(final JList romList, final Display display)
   {
     JPanel buttonPanel = new JPanel();
     buttonPanel.setLayout(new BoxLayout(buttonPanel,BoxLayout.X_AXIS));
@@ -73,20 +74,43 @@ public class Emulator
     buttonPanel.add(saveButton);
     buttonPanel.add(loadButton);
 
+    saveButton.addActionListener(new AbstractAction()
+    {
+      @Override
+      public void actionPerformed(ActionEvent actionEvent)
+      {
+        cpu.save();
+        screen.grabFocus();
+      }
+    });
+
+    loadButton.addActionListener(new AbstractAction()
+    {
+      @Override
+      public void actionPerformed(ActionEvent actionEvent)
+      {
+        cpu.load();
+        screen.grabFocus();
+      }
+    });
+
     loadRomButton.addActionListener(new ActionListener()
     {
       @Override
       public void actionPerformed(ActionEvent actionEvent)
       {
-        Object rom = romList.getSelectedValue();
-        if (rom == null) return;
+        if (romList.isSelectionEmpty()) return;
+
+        String romName = romList.getSelectedValue().toString();
+        Rom rom = new Rom(romName);
+        display.grabFocus();
+
         if (cpu == null) {
-          /* Start the CPU */
-          cpu = new CPU(screen,rom.toString());
+          /* Start the Chip8Processor */
+          cpu = new Chip8Processor(screen,rom);
           new Thread(cpu).start();
         } else {
-          cpu.reset(rom.toString());
-          cpu.run();
+          cpu.reset(rom);
         }
       }
     });
@@ -106,5 +130,21 @@ public class Emulator
   public static void main(String[] a)
   {
     new Emulator();
+  }
+
+  public void save(String fname)
+      throws IOException
+  {
+    FileOutputStream out = new FileOutputStream(fname);
+    cpu.saveState(new DataOutputStream(out));
+    out.close();
+  }
+
+  public void load(String fname)
+      throws IOException
+  {
+    FileInputStream in = new FileInputStream(fname);
+    cpu.loadState(new DataInputStream(in));
+    in.close();
   }
 }

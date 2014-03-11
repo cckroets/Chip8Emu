@@ -1,5 +1,6 @@
 package chip_8;
 
+import Emulation.Rom;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -10,7 +11,7 @@ import junit.framework.TestSuite;
 public class TestInstructions extends TestCase
 {
     Display d = new Display();
-    CPU cpu = new CPU(d,"invaders.rom");
+    Chip8Processor cpu = new Chip8Processor(d,new Rom("invaders.rom"));
 
   /**
    * Create the test case
@@ -30,15 +31,14 @@ public class TestInstructions extends TestCase
     return new TestSuite( TestInstructions.class );
   }
 
-  public void testALU()
-  {
-    byte a = (byte)0xF0;
-    byte b = (byte)0x0F;
-    cpu.reg.v[0] = (byte)0xF0;
-    cpu.reg.v[1] = (byte)0x0F;
-    cpu.dispatchALU((byte)0,(byte)1,0x1);
 
-    assertEquals((byte)0xFF,cpu.reg.v[0]);
+  public void testFoo()
+  {
+    byte b = (byte)0x80;
+    byte c = (byte)0x01;
+
+    byte result = (byte)(b + c);
+    assertEquals(0x81,result);
 
 
   }
