@@ -1,54 +1,48 @@
 package chip_8;
 
 
+import Emulation.Emulator;
 import Emulation.Rom;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import javax.swing.*;
 
 
 /**
  * @author ckroetsc
  */
-public class Emulator
+public class Chip8GUI
 {
-  /* The CHIP-8 Chip8Processor that executes instructions */
-  private Chip8Processor cpu = null;
-
-  /* Displays the screen of the Chip-8 */
-  private Display screen;
-  private File romFolder = Utils.getResourceFile("roms");
-  private JButton loadRomButton;
+  final Display _display;
+  final Emulator _emu;
 
   /* Initialize the emulator */
-  public Emulator()
+  public Chip8GUI(Emulator e, Display d)
   {
+    this._emu = e;
+    this._display = d;
+    File romFolder = Utils.getResourceFile("roms");
+
     /* Create new JFrame */
     JFrame window = new JFrame("CHIP-8");
     JPanel panel = new JPanel();
-    screen = new Display();
     final JList romList = new JList(romFolder.list());
 
     window.getContentPane().add(panel);
     panel.setLayout(new BorderLayout());
 
-    JScrollPane romChooser = makeRomChooser(romList,screen.getPreferredSize());
-    romChooser.setPreferredSize(new Dimension(160,screen.getPreferredSize().height));
-    JPanel buttons = makeButtonPanel(romList,screen);
+    JScrollPane romChooser = makeRomChooser(romList,_display.getPreferredSize());
+    romChooser.setPreferredSize(new Dimension(160,_display.getPreferredSize().height));
+    JPanel buttons = makeButtonPanel(romList);
 
     /* Add panels to the frame */
-    panel.add(screen, BorderLayout.EAST);
+    panel.add(_display, BorderLayout.EAST);
     panel.add(romChooser,BorderLayout.WEST);
     panel.add(buttons,BorderLayout.SOUTH);
-    int width = screen.getPreferredSize().width;
-    int height = screen.getPreferredSize().height;
+    int width = _display.getPreferredSize().width;
+    int height = _display.getPreferredSize().height;
     panel.setPreferredSize(new Dimension(width+160,height+buttons.getPreferredSize().height));
 
     /* JFrame Properties */
@@ -59,11 +53,11 @@ public class Emulator
     window.setVisible(true);
   }
 
-  private JPanel makeButtonPanel(final JList romList, final Display display)
+  private JPanel makeButtonPanel(final JList romList)
   {
     JPanel buttonPanel = new JPanel();
     buttonPanel.setLayout(new BoxLayout(buttonPanel,BoxLayout.X_AXIS));
-    loadRomButton = new JButton("Load Rom");
+    JButton loadRomButton = new JButton("Load Rom");
     JButton resetButton = new JButton("Reset");
     JButton saveButton = new JButton("Save");
     JButton loadButton = new JButton("Load");
@@ -79,8 +73,8 @@ public class Emulator
       @Override
       public void actionPerformed(ActionEvent actionEvent)
       {
-        cpu.save();
-        screen.grabFocus();
+        _emu.save();
+        _display.grabFocus();
       }
     });
 
@@ -89,8 +83,8 @@ public class Emulator
       @Override
       public void actionPerformed(ActionEvent actionEvent)
       {
-        cpu.load();
-        screen.grabFocus();
+        _emu.load();
+        _display.grabFocus();
       }
     });
 
@@ -103,15 +97,8 @@ public class Emulator
 
         String romName = romList.getSelectedValue().toString();
         Rom rom = new Rom(romName);
-        display.grabFocus();
-
-        if (cpu == null) {
-          /* Start the Chip8Processor */
-          cpu = new Chip8Processor(screen,rom);
-          new Thread(cpu).start();
-        } else {
-          cpu.reset(rom);
-        }
+        _display.grabFocus();
+        _emu.reset(rom);
       }
     });
 
@@ -125,26 +112,5 @@ public class Emulator
     romList.setVisibleRowCount(-1);
     romList.setFixedCellWidth(parent.width/4);
     return new JScrollPane(romList);
-  }
-
-  public static void main(String[] a)
-  {
-    new Emulator();
-  }
-
-  public void save(String fname)
-      throws IOException
-  {
-    FileOutputStream out = new FileOutputStream(fname);
-    cpu.saveState(new DataOutputStream(out));
-    out.close();
-  }
-
-  public void load(String fname)
-      throws IOException
-  {
-    FileInputStream in = new FileInputStream(fname);
-    cpu.loadState(new DataInputStream(in));
-    in.close();
   }
 }

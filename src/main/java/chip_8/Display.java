@@ -3,8 +3,8 @@ package chip_8;
 
 import Emulation.Hardware;
 import java.awt.*;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import javax.swing.*;
 import java.util.Arrays;
@@ -81,7 +81,7 @@ public class Display extends JPanel implements Hardware
   }
 
   @Override
-  public void saveState(DataOutputStream out)
+  public void saveState(DataOutput out)
       throws IOException
   {
     for (int x = 0; x < TILES_ACROSS; x++) {
@@ -92,7 +92,7 @@ public class Display extends JPanel implements Hardware
   }
 
   @Override
-  public void loadState(DataInputStream in)
+  public void loadState(DataInput in)
       throws IOException
   {
     clear();

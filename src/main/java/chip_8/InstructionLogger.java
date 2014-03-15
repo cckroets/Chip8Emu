@@ -37,42 +37,42 @@ public class InstructionLogger
     log.debug(s);
   }
 
-  public void addr(String s, int addr)
+  public void instrAddr(String s, int addr)
   {
     log.debug("{} {}", s, addr);
   }
 
-  public void regAddr(String s, int reg, int addr)
+  public void instrRegAddr(String s, int reg, int addr)
   {
     log.debug("{} V{}, {}", s, reg, addr);
   }
 
-  public void regAddr(String s, String reg, int addr)
+  public void instrRegAddr(String s, String reg, int addr)
   {
     log.debug("{} {}, {}", s, reg, addr);
   }
 
-  public void regReg(String s, int r1, int r2)
+  public void instrRegReg(String s, int r1, int r2)
   {
     log.debug("{} V{}, V{}", s, r1, r2);
   }
 
-  public void reg(String s, int r1)
+  public void instrReg(String s, int r1)
   {
     log.debug("{} V{}", s, r1);
   }
 
-  public void regReg(String s, int r1, String r2)
+  public void instrRegReg(String s, int r1, String r2)
   {
     log.debug("{} V{}, {}", s, r1, r2);
   }
 
-  public void regReg(String s, String r1, int r2)
+  public void instrRegReg(String s, String r1, int r2)
   {
     log.debug("{} {}, V{}", s, r1, r2);
   }
 
-  public void regRegAddr(String s, int r1, int r2, int n)
+  public void instrRegRegAddr(String s, int r1, int r2, int n)
   {
     log.debug("{} V{}, V{}, {}", s, r1, r2, n);
   }

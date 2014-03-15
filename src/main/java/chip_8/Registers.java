@@ -2,8 +2,8 @@ package chip_8;
 
 
 import Emulation.Hardware;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -140,7 +140,7 @@ public class Registers implements Hardware
   }
 
   @Override
-  public void saveState(DataOutputStream out)
+  public void saveState(DataOutput out)
       throws IOException
   {
     out.write(v);
@@ -154,10 +154,10 @@ public class Registers implements Hardware
   }
 
   @Override
-  public void loadState(DataInputStream in)
+  public void loadState(DataInput in)
       throws IOException
   {
-    in.read(v);
+    in.readFully(v);
     i  = in.readInt();
     pc = in.readInt();
     sp = in.readInt();

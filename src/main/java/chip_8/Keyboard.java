@@ -4,8 +4,8 @@ package chip_8;
 import Emulation.Hardware;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -69,14 +69,14 @@ public class Keyboard extends KeyAdapter implements Hardware
   }
 
   @Override
-  public void saveState(DataOutputStream out)
+  public void saveState(DataOutput out)
       throws IOException
   {
 
   }
 
   @Override
-  public void loadState(DataInputStream in)
+  public void loadState(DataInput in)
       throws IOException
   {
 

@@ -1,22 +1,20 @@
 package Emulation;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 
 /**
  * @author ckroetsc
- * A piece of Hardware. Coule be Chip8Processor, Memory, Registers, Display, etc...
+ * A piece of Hardware. Coule be Memory, Registers, Display, etc...
  */
 public interface Hardware
 {
-  public void saveState(DataOutputStream out)
+  public void saveState(DataOutput out)
       throws IOException;
 
-  public void loadState(DataInputStream in)
+  public void loadState(DataInput in)
       throws IOException;
 
   public void reset();

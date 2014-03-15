@@ -11,7 +11,7 @@ import junit.framework.TestSuite;
 public class TestInstructions extends TestCase
 {
     Display d = new Display();
-    Chip8Processor cpu = new Chip8Processor(d,new Rom("invaders.rom"));
+    Chip8Processor cpu = new Chip8Processor(d);
 
   /**
    * Create the test case

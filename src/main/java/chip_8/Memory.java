@@ -3,8 +3,8 @@ package chip_8;
 
 import Emulation.Hardware;
 import com.google.common.io.Files;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,20 +28,17 @@ public class Memory implements Hardware
   }
 
   @Override
-  public void saveState(DataOutputStream out)
+  public void saveState(DataOutput out)
       throws IOException
   {
-    System.out.println("memSAVE");
     out.write(ram);
   }
 
   @Override
-  public void loadState(DataInputStream in)
+  public void loadState(DataInput in)
       throws IOException
   {
-    System.out.println("memLOAD");
-    if (in.read(ram) != RAM_SIZE)
-      throw new IOException();
+    in.readFully(ram);
   }
 
   /* Reset the memory. Blank the loaded rom, but leave the loaded digits */
