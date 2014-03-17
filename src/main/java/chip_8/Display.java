@@ -2,12 +2,18 @@ package chip_8;
 
 
 import Emulation.Hardware;
+import Emulation.Screen.Bitmap;
+import Emulation.Screen.ImageScalingAlgorithm;
+import Emulation.Screen.Scale2x;
+import Emulation.Screen.Scale3x;
+import Emulation.Screen.Scale4x;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import javax.swing.*;
-import java.util.Arrays;
 
 
 /**
@@ -17,25 +23,29 @@ public class Display extends JPanel implements Hardware
 {
   public static final int TILES_ACROSS = 64;
   public static final int TILES_DOWN = 32;
-  public static int TILE_SIZE = 10;
+  public static int TILE_SIZE = 12;
   public static int SCREEN_WIDTH = TILE_SIZE * TILES_ACROSS;
   public static int SCREEN_HEIGHT = TILE_SIZE * TILES_DOWN;
 
   public static Color FOREGROUND_COLOR = new Color(0x19251B);
   public static Color BACKGROUND_COLOR = new Color(0x496D4F);
 
-  private boolean[][] pixelModel = new boolean[TILES_ACROSS][TILES_DOWN];
+  private BinaryBitmap pixelModel = BinaryBitmap.newBitmap1D(TILES_ACROSS, TILES_DOWN);
+  private ImageScalingAlgorithm upscaleAlg = new Scale4x<Boolean>();
 
 
   @Override
   public void paint(Graphics g) {
     Graphics2D g2 = (Graphics2D) g;
+    BinaryBitmap upscaled = (BinaryBitmap) upscaleAlg.upscaleBitmap(pixelModel);
+    int scaleFactor = upscaleAlg.getScaleFactor();
+    int scaledTileSize = TILE_SIZE / scaleFactor;
 
-    for (int x = 0; x < TILES_ACROSS; x++) {
-      for (int y = 0; y < TILES_DOWN; y++) {
-        Color c = (pixelModel[x][y]) ? FOREGROUND_COLOR : BACKGROUND_COLOR;
+    for (int x = 0; x < TILES_ACROSS*scaleFactor; x++) {
+      for (int y = 0; y < TILES_DOWN*scaleFactor; y++) {
+        Color c = (upscaled.get(x, y)) ? FOREGROUND_COLOR : BACKGROUND_COLOR;
         g2.setColor(c);
-        g2.fillRect(x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE,TILE_SIZE);
+        g2.fillRect(x * scaledTileSize, y * scaledTileSize, scaledTileSize, scaledTileSize);
       }
     }
   }
@@ -56,9 +66,9 @@ public class Display extends JPanel implements Hardware
         boolean on = ((bite & (0x80 >> b))) != 0;
         int x = (vx + b) % TILES_ACROSS;
         if (x < 0) x += TILES_ACROSS;
-        boolean erased = on && pixelModel[x][y];
+        boolean erased = on && pixelModel.get(x, y);
         collision |= erased;
-        pixelModel[x][y] ^= on;
+        pixelModel.xor(x,y,on);
       }
       y = (y + 1) % TILES_DOWN;
     }
@@ -69,15 +79,40 @@ public class Display extends JPanel implements Hardware
 
   /* Clear the screen */
   public void clear() {
-    for (boolean[] row: pixelModel) {
-      Arrays.fill(row,false);
-    }
+    pixelModel.clear();
     repaint();
   }
 
   public Display() {
     this.setPreferredSize(new Dimension(SCREEN_WIDTH,SCREEN_HEIGHT));
     this.setFocusable(true);
+    this.addKeyListener(new KeyAdapter()
+    {
+      @Override
+      public void keyPressed(KeyEvent keyEvent)
+      {
+        if (keyEvent.getKeyChar() == ' ') {
+          if (upscaleAlg.getScaleFactor() == 1)
+            upscaleAlg = new Scale4x();
+          else
+            upscaleAlg = new ImageScalingAlgorithm()
+            {
+              @Override
+              public Bitmap upscaleBitmap(Bitmap original)
+              {
+                return original;
+              }
+
+              @Override
+              public int getScaleFactor()
+              {
+                return 1;
+              }
+            };
+          keyEvent.getComponent().repaint();
+        }
+      }
+    });
   }
 
   @Override
@@ -86,7 +121,7 @@ public class Display extends JPanel implements Hardware
   {
     for (int x = 0; x < TILES_ACROSS; x++) {
       for (int y = 0; y < TILES_DOWN; y++) {
-        out.writeBoolean(pixelModel[x][y]);
+        out.writeBoolean(pixelModel.get(x, y));
       }
     }
   }
@@ -98,7 +133,7 @@ public class Display extends JPanel implements Hardware
     clear();
     for (int x = 0; x < TILES_ACROSS; x++) {
       for (int y = 0; y < TILES_DOWN; y++) {
-        pixelModel[x][y] = in.readBoolean();
+        pixelModel.set(x, y, in.readBoolean());
       }
     }
     repaint();

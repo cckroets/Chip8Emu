@@ -102,6 +102,16 @@ public class Chip8GUI
       }
     });
 
+    resetButton.addActionListener(new AbstractAction()
+    {
+      @Override
+      public void actionPerformed(ActionEvent actionEvent)
+      {
+        _emu.reset();
+        _display.grabFocus();
+      }
+    });
+
     return buttonPanel;
   }
 
