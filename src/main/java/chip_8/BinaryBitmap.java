@@ -2,19 +2,30 @@ package chip_8;
 
 
 import Emulation.Screen.Bitmap;
-import java.util.Arrays;
+import java.awt.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.BitSet;
+import java.util.Iterator;
+import java.util.Observable;
 
 
 /**
  * @author ckroetsc
  */
-public class BinaryBitmap implements Bitmap<Boolean>
+public class BinaryBitmap extends Observable implements Bitmap<Boolean>
 {
-  boolean[][] _bitmap;
+  BitSet _bitmap;
+  int _width;
+  int _height;
+
 
   private BinaryBitmap(int l, int h)
   {
-    _bitmap = new boolean[l][h];
+    _bitmap = new BitSet(l * h);
+    _width = l;
+    _height = h;
   }
 
   public static BinaryBitmap newBitmap1D(int length, int height)
@@ -24,12 +35,12 @@ public class BinaryBitmap implements Bitmap<Boolean>
 
   public int getHeight()
   {
-    return _bitmap[0].length;
+    return _height;
   }
 
-  public int getLength()
+  public int getWidth()
   {
-    return _bitmap.length;
+    return _width;
   }
 
   @Override
@@ -41,22 +52,28 @@ public class BinaryBitmap implements Bitmap<Boolean>
    * @param y position of the coordinate
    * @return The polarity of the pixel (On/Off)
    */
+  @Override
   public Boolean get(int x, int y)
   {
-    return _bitmap[x][y];
+    return _bitmap.get(y * _width + x);
   }
 
+  @Override
+  public Boolean get(Point p)
+  {
+    return get(p.x,p.y);
+  }
 
   @Override
   public boolean similar(Boolean p1, Boolean p2)
   {
-    return p1 == p2;
+    return (p1 != null) && (p1 == p2);
   }
 
   @Override
-  public Bitmap<Boolean> genEmptyAndScaled(int scaleFactor)
+  public BinaryBitmap genEmptyAndScaled(int scaleFactor)
   {
-    return new BinaryBitmap(getLength() * scaleFactor,
+    return new BinaryBitmap(getWidth() * scaleFactor,
                                    getHeight() * scaleFactor);
   }
 
@@ -68,19 +85,52 @@ public class BinaryBitmap implements Bitmap<Boolean>
   @Override
   public void set(int x, int y, Boolean val)
   {
-    _bitmap[x][y] = val;
+    setChanged();
+    _bitmap.set(y * _width + x, val);
   }
 
   public void xor(int x, int y, boolean val)
   {
-    _bitmap[x][y] ^= val;
+    set(x,y, val ^ get(x,y));
   }
 
   @Override
   public void clear()
   {
-    for (boolean[] row: _bitmap) {
-      Arrays.fill(row, false);
+    _bitmap.clear();
+    setChanged();
+    notifyObservers();
+  }
+
+
+  @Override
+  public void saveState(DataOutput out)
+      throws IOException
+  {
+    for (int x = 0; x < getWidth(); x++) {
+      for (int y = 0; y < getHeight(); y++) {
+        out.writeBoolean(get(x, y));
+      }
     }
+  }
+
+  @Override
+  public void loadState(DataInput in)
+      throws IOException
+  {
+    clear();
+    for (int x = 0; x < getWidth(); x++) {
+      for (int y = 0; y < getHeight(); y++) {
+        set(x, y, in.readBoolean());
+      }
+    }
+    setChanged();
+    notifyObservers();
+  }
+
+  @Override
+  public void reset()
+  {
+    clear();
   }
 }

@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Map;
 
 
 /**
@@ -16,15 +17,25 @@ import java.net.URL;
  */
 public class Rom
 {
-  private String filename;
   private static String romExtension  = ".rom";
   private static String saveExtension  = ".chip8";
   private static String romFolderName  = "roms";
   private static String saveFolderName = "saves";
 
+  private String filename;
+  private String displayName;
+  private Map<Integer,KeyInfo> keyMap;
+
   public Rom(String filename)
   {
     this.filename = filename;
+  }
+
+  public Rom(String filename, String displayName, Map keyMap)
+  {
+    this.filename = filename;
+    this.displayName = displayName;
+    this.keyMap = keyMap;
   }
 
   public static void setRomFolderName(String newFolder)
@@ -79,5 +90,11 @@ public class Rom
       e.printStackTrace();
     }
     return new DataOutputStream(out);
+  }
+
+  class KeyInfo
+  {
+    public int keycode;
+    public String doc;
   }
 }

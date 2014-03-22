@@ -1,0 +1,49 @@
+{
+  "connect4" : {
+    "name" : "Connect 4",
+    "keyMap" :
+      {
+        "4" : { "key" : "LEFT",  "doc" : "Move left" },
+        "5" : { "key" : "UP",    "doc" : "Set marker" },
+        "6" : { "key" : "RIGHT", "doc" : "Move right" }
+      }
+  },
+
+  "invaders" : {
+    "name" : "Space Invaders",
+    "keyMap" :
+      {
+        "4" : { "key" : "LEFT",  "doc" : "Move left" },
+        "5" : { "key" : "UP",    "doc" : "Shoot" },
+        "6" : { "key" : "RIGHT", "doc" : "Move right" }
+      }
+  },
+
+  "brix" : {
+    "name" : "Space Invaders",
+    "keyMap" :
+      {
+        "4" : { "key" : "LEFT",  "doc" : "Move left" },
+        "6" : { "key" : "RIGHT", "doc" : "Move right" }
+      }
+  },
+
+  "breakout" : {
+    "name" : "Space Invaders",
+    "keyMap" :
+      {
+        "4" : { "key" : "LEFT",  "doc" : "Move left" },
+        "6" : { "key" : "RIGHT", "doc" : "Move right" }
+      }
+  },
+
+  "tetris" : {
+    "name" : "Space Invaders",
+    "keyMap" :
+      {
+        "4" : { "key" : "DOWN",  "doc" : "Rotate" },
+        "5" : { "key" : "LEFT",  "doc" : "Move left" },
+        "6" : { "key" : "RIGHT", "doc" : "Move right" }
+      }
+  }
+}

@@ -15,6 +15,12 @@ public class Scale2x<Pixel> extends ScaleNx<Pixel>
   }
 
   @Override
+  public String getDisplayName()
+  {
+    return "Scale 2x";
+  }
+
+  @Override
   protected void upscalePixel(Bitmap<Pixel> bmap, int x, int y,
                               Bitmap<Pixel> scaled, int scaled_x, int scaled_y)
   {

@@ -50,7 +50,10 @@ public class Emulator implements Runnable, Hardware
    */
   public synchronized void pause()
   {
-    changeState(State.PAUSE);
+    if (getState() == State.PAUSE)
+      resume();
+    else
+      changeState(State.PAUSE);
   }
 
   /**

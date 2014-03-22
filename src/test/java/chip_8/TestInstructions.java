@@ -10,8 +10,8 @@ import junit.framework.TestSuite;
  */
 public class TestInstructions extends TestCase
 {
-    Display d = new Display();
-    Chip8Processor cpu = new Chip8Processor(d);
+  Chip8Processor cpu = new Chip8Processor();
+  Display d = new Display(cpu);
 
   /**
    * Create the test case

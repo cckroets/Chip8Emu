@@ -1,147 +1,127 @@
 package chip_8;
 
 
-import Emulation.Hardware;
-import Emulation.Screen.Bitmap;
 import Emulation.Screen.ImageScalingAlgorithm;
-import Emulation.Screen.Scale2x;
-import Emulation.Screen.Scale3x;
-import Emulation.Screen.Scale4x;
+import Emulation.Screen.ImageScalingFactory;
+import java.util.List;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.util.Observable;
+import java.util.Observer;
 import javax.swing.*;
 
 
 /**
  * @author ckroetsc
  */
-public class Display extends JPanel implements Hardware
+public class Display extends JPanel implements Observer
 {
-  public static final int TILES_ACROSS = 64;
-  public static final int TILES_DOWN = 32;
-  public static int TILE_SIZE = 12;
-  public static int SCREEN_WIDTH = TILE_SIZE * TILES_ACROSS;
-  public static int SCREEN_HEIGHT = TILE_SIZE * TILES_DOWN;
+  private int tileSize = 12;
+  private int tilesAcross;
+  private int tilesDown;
 
   public static Color FOREGROUND_COLOR = new Color(0x19251B);
   public static Color BACKGROUND_COLOR = new Color(0x496D4F);
 
-  private BinaryBitmap pixelModel = BinaryBitmap.newBitmap1D(TILES_ACROSS, TILES_DOWN);
-  private ImageScalingAlgorithm upscaleAlg = new Scale4x<Boolean>();
+  private int algIndex = 0;
+  private List<ImageScalingAlgorithm> algorithms = ImageScalingFactory.getAlgorithms();
+  private volatile ImageScalingAlgorithm upscaleAlg = ImageScalingFactory.noUpscale();
+  private BinaryBitmap _bitmapModel = null;
+  private BinaryBitmap _bitmapUpscaled = null;
 
 
   @Override
-  public void paint(Graphics g) {
+  public synchronized void paint(Graphics g) {
     Graphics2D g2 = (Graphics2D) g;
-    BinaryBitmap upscaled = (BinaryBitmap) upscaleAlg.upscaleBitmap(pixelModel);
     int scaleFactor = upscaleAlg.getScaleFactor();
-    int scaledTileSize = TILE_SIZE / scaleFactor;
+    int scaledTileSize = tileSize / scaleFactor;
 
-    for (int x = 0; x < TILES_ACROSS*scaleFactor; x++) {
-      for (int y = 0; y < TILES_DOWN*scaleFactor; y++) {
-        Color c = (upscaled.get(x, y)) ? FOREGROUND_COLOR : BACKGROUND_COLOR;
-        g2.setColor(c);
-        g2.fillRect(x * scaledTileSize, y * scaledTileSize, scaledTileSize, scaledTileSize);
+    /* Clear display */
+    g2.setColor(BACKGROUND_COLOR);
+    g2.fillRect(0,0, tileSize * tilesAcross, tileSize * tilesDown);
+    g2.setColor(FOREGROUND_COLOR);
+
+    int pixelOnLength = 0;
+
+    for (int y=0; y < _bitmapUpscaled.getHeight(); y++) {
+      for (int x=0; x < _bitmapUpscaled.getWidth(); x++) {
+        if (_bitmapUpscaled.get(x,y)) {
+          pixelOnLength++;
+        } else {
+          drawLine(g2, x - pixelOnLength, y, pixelOnLength, scaledTileSize);
+          pixelOnLength = 0;
+        }
       }
+      drawLine(g2, _bitmapUpscaled.getWidth() - pixelOnLength, y, pixelOnLength, scaledTileSize);
+      pixelOnLength = 0;
     }
   }
 
-  /* Draw a sprite av (vx,vy) on the screen, which starts at i in memory */
-  public boolean draw(int vx, int vy, int i, Memory mem, int height)
+  private void drawLine(Graphics2D g2, int x, int y, int width, int scale)
   {
-    vx &= 0xFF;
-    Chip8Processor.log.dumpI();
-    Chip8Processor.log.dumpSprite(height);
-    Chip8Processor.log.dumpAllReg();
-    if ( vy < 0) vy += TILES_DOWN;
-    int y = vy & 0xFF;
-    boolean collision = false;
-    for (int p = 0; p < height; p++) {
-      byte bite = mem.at((short)(i+p));
-      for (int b = 0; b < 8; b++) {
-        boolean on = ((bite & (0x80 >> b))) != 0;
-        int x = (vx + b) % TILES_ACROSS;
-        if (x < 0) x += TILES_ACROSS;
-        boolean erased = on && pixelModel.get(x, y);
-        collision |= erased;
-        pixelModel.xor(x,y,on);
-      }
-      y = (y + 1) % TILES_DOWN;
+    if (width > 0) {
+      g2.fillRect(x * scale, y * scale, scale * width, scale);
     }
-
-    repaint();
-    return collision;
   }
 
-  /* Clear the screen */
-  public void clear() {
-    pixelModel.clear();
-    repaint();
-  }
+  public Display(Chip8Processor cpu)
+  {
+    this._bitmapModel = cpu.getBitmap();
+    this._bitmapUpscaled = _bitmapModel.genEmptyAndScaled(upscaleAlg.getScaleFactor());
+    this.tilesAcross = Chip8Processor.PIXEL_WIDTH;
+    this.tilesDown = Chip8Processor.PIXEL_HEIGHT;
+    cpu.setDisplay(this);
 
-  public Display() {
-    this.setPreferredSize(new Dimension(SCREEN_WIDTH,SCREEN_HEIGHT));
+    this.setPreferredSize(new Dimension(tilesAcross * tileSize, tilesDown * tileSize));
     this.setFocusable(true);
     this.addKeyListener(new KeyAdapter()
     {
       @Override
       public void keyPressed(KeyEvent keyEvent)
       {
-        if (keyEvent.getKeyChar() == ' ') {
-          if (upscaleAlg.getScaleFactor() == 1)
-            upscaleAlg = new Scale4x();
-          else
-            upscaleAlg = new ImageScalingAlgorithm()
-            {
-              @Override
-              public Bitmap upscaleBitmap(Bitmap original)
-              {
-                return original;
-              }
-
-              @Override
-              public int getScaleFactor()
-              {
-                return 1;
-              }
-            };
-          keyEvent.getComponent().repaint();
+        if (keyEvent.getKeyChar() == 'n')
+        {
+          algIndex = (algIndex + 1) % algorithms.size();
+          setUpscaleAlgorithm(algorithms.get(algIndex));
+        } else if (keyEvent.getKeyChar() == 'm')
+        {
+          algIndex--;
+          algIndex = (algIndex == -1) ? algorithms.size()-1 : algIndex;
+          setUpscaleAlgorithm(algorithms.get(algIndex));
         }
       }
     });
   }
 
   @Override
-  public void saveState(DataOutput out)
-      throws IOException
+  public void update(Observable observable, Object o)
   {
-    for (int x = 0; x < TILES_ACROSS; x++) {
-      for (int y = 0; y < TILES_DOWN; y++) {
-        out.writeBoolean(pixelModel.get(x, y));
+    new Thread(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        _bitmapUpscaled = (BinaryBitmap) upscaleAlg.upscaleBitmap(_bitmapModel);
+        repaint();
       }
-    }
+    }).start();
   }
 
-  @Override
-  public void loadState(DataInput in)
-      throws IOException
+  public synchronized void setUpscaleAlgorithm(ImageScalingAlgorithm newAlg)
   {
-    clear();
-    for (int x = 0; x < TILES_ACROSS; x++) {
-      for (int y = 0; y < TILES_DOWN; y++) {
-        pixelModel.set(x, y, in.readBoolean());
-      }
-    }
+    this.upscaleAlg = newAlg;
+    this._bitmapUpscaled = (BinaryBitmap) newAlg.upscaleBitmap(_bitmapModel);
     repaint();
   }
 
-  @Override
-  public void reset()
+  public static void setForegroundColor(Color c)
   {
-    clear();
+    FOREGROUND_COLOR = c;
+  }
+
+  public static void setBackgroundColor(Color c)
+  {
+    BACKGROUND_COLOR = c;
   }
 }

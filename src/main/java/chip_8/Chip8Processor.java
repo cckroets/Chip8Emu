@@ -4,8 +4,10 @@ package chip_8;
 import Emulation.CPU;
 import Emulation.Hardware;
 import Emulation.Rom;
+import Emulation.Screen.Bitmap;
 import com.google.common.collect.Lists;
 import java.util.Collection;
+import java.util.Observable;
 
 
 /**
@@ -16,27 +18,35 @@ public class Chip8Processor implements CPU
   public static InstructionLogger log = new InstructionLogger();
   public static final int SPRITE_LENGTH = 5;
   public static final short START_OF_PROGRAM = 0x200;
+  public static final int PIXEL_WIDTH = 64;
+  public static final int PIXEL_HEIGHT = 32;
 
   private Display   display  = null;
   private Registers reg      = new Registers();
   private Keyboard  keyboard = new Keyboard();
   private Memory    memory   = new Memory();
   private Collection<Hardware> componentList;
+  private BinaryBitmap bmap = BinaryBitmap.newBitmap1D(PIXEL_WIDTH,PIXEL_HEIGHT);
 
   // Use these to avoid annoying explicit casts in arithmetic
   public static final byte zero = 0;
   public static final byte one = 1;
 
+
   /* Initialize the Chip8Processor exactly once */
-  public Chip8Processor(Display display)
+  public Chip8Processor()
   {
-    this.display = display;
-    this.display.addKeyListener(keyboard);
     log.setMem(memory);
     log.setReg(reg);
-    componentList = Lists.newArrayList(display,keyboard,reg,memory);
+    componentList = Lists.newArrayList(keyboard,reg,memory,bmap);
   }
 
+  public void setDisplay(Display d)
+  {
+    this.display = d;
+    this.display.addKeyListener(keyboard);
+    bmap.addObserver(this.display);
+  }
 
   @Override
   public void loadRom(Rom rom)
@@ -72,7 +82,7 @@ public class Chip8Processor implements CPU
   /* Wait for Clock Cycle to end */
   private void sleep() {
     try {
-      Thread.sleep(0,1000);
+      Thread.sleep(0,10);
     } catch(InterruptedException ex) {
       Thread.currentThread().interrupt();
     }
@@ -90,7 +100,7 @@ public class Chip8Processor implements CPU
     {
       case 0x0000:
         if (instr == 0x00E0) {
-          display.clear();
+          bmap.clear();
           log.name("CLS");
         }
         else if (instr == 0x00EE) {
@@ -147,8 +157,7 @@ public class Chip8Processor implements CPU
         log.instrRegAddr("RND", x, kk);
         break;
       case 0xD000:
-        boolean col = display.draw(reg.v(x), reg.v(y), reg.i, memory, (instr & 0x000F));
-        reg.setVF(col);
+        draw(reg.v(x), reg.v(y), (instr & 0x000F));
         log.instrRegRegAddr("DRW", x, y, (instr & 0x000F));
         break;
       case 0xE000:
@@ -277,4 +286,33 @@ public class Chip8Processor implements CPU
         break;
     }
   }
+
+  /* Draw a sprite av (vx,vy) on the screen, which starts at i in memory */
+  public void draw(int vx, int vy, int height)
+  {
+    vx &= 0xFF;
+    log.dumpI();
+    log.dumpSprite(height);
+    log.dumpAllReg();
+    if ( vy < 0) vy += PIXEL_HEIGHT;
+    int y = vy % PIXEL_HEIGHT;
+    boolean collision = false;
+    for (int p = 0; p < height; p++) {
+      byte bite = memory.at((short)(reg.i+p));
+      for (int b = 0; b < 8; b++) {
+        boolean on = ((bite & (0x80 >> b))) != 0;
+        int x = (vx + b) % PIXEL_WIDTH;
+        if (x < 0) x += PIXEL_WIDTH;
+        boolean erased = on && bmap.get(x, y);
+        collision |= erased;
+        bmap.xor(x,y,on);
+      }
+      y = (y + 1) % PIXEL_HEIGHT;
+    }
+
+    reg.setVF(collision);
+    bmap.notifyObservers();
+  }
+
+  public BinaryBitmap getBitmap() { return bmap; }
 }

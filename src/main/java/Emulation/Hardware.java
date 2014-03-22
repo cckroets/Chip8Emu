@@ -7,7 +7,7 @@ import java.io.IOException;
 
 /**
  * @author ckroetsc
- * A piece of Hardware. Coule be Memory, Registers, Display, etc...
+ * A piece of Hardware. Coule be Memory, Registers, Bitmap, etc...
  */
 public interface Hardware
 {

@@ -61,13 +61,13 @@ public class Scale3x<Pixel> extends ScaleNx<Pixel>
   }
   private Pixel getNorthEast(Bitmap<Pixel> bitmap, int x, int y)
   {
-    return ((y == 0) || (x == bitmap.getLength()-1)) ?
+    return ((y == 0) || (x == bitmap.getWidth()-1)) ?
         null : bitmap.get(x+1,y-1);
   }
 
   private Pixel getSouthEast(Bitmap<Pixel> bitmap, int x, int y)
   {
-    return ((y == bitmap.getHeight()-1) || (x == bitmap.getLength()-1)) ?
+    return ((y == bitmap.getHeight()-1) || (x == bitmap.getWidth()-1)) ?
         null : bitmap.get(x+1,y+1);
   }
 

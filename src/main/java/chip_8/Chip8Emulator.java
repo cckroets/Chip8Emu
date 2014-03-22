@@ -17,8 +17,8 @@ public class Chip8Emulator
   /* Initialize the emulator */
   public Chip8Emulator()
   {
-    Display display = new Display();
-    this.cpu = new Chip8Processor(display);
+    this.cpu = new Chip8Processor();
+    Display display = new Display(cpu);
     this.emu = new Emulator(cpu);
     this.gui = new Chip8GUI(emu,display);
   }
